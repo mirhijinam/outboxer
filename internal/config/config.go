@@ -1,10 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"log"
-	"os"
-	"strconv"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 )
 
@@ -41,55 +41,12 @@ func init() {
 }
 
 func New() (*Config, error) {
-	dbconf, err := GetDBConfig()
-	if err != nil {
-		return &Config{}, err
+	config := &Config{}
+
+	if err := env.Parse(config); err != nil {
+		// TODO: add a log msg
+		return nil, fmt.Errorf("failed to parse config from environment variables: %w", err)
 	}
 
-	srvconf, err := GetServerConfig()
-	if err != nil {
-		return &Config{}, err
-	}
-
-	logconf, err := GetLoggerConfig()
-	if err != nil {
-		return &Config{}, err
-	}
-
-	return &Config{
-		DBConfig:     dbconf,
-		ServerConfig: srvconf,
-		LoggerConfig: logconf,
-	}, nil
-}
-
-func GetDBConfig() (DBConfig, error) {
-	pgPort, err := strconv.ParseInt(os.Getenv("PGPORT"), 0, 16)
-	if err != nil {
-		return DBConfig{}, err
-	}
-
-	return DBConfig{
-		PgUser:     os.Getenv("PGUSER"),
-		PgPassword: os.Getenv("PGPASSWORD"),
-		PgHost:     os.Getenv("PGHOST"),
-		PgPort:     uint16(pgPort),
-		PgDatabase: os.Getenv("PGDATABASE"),
-		PgSSLMode:  os.Getenv("PGSSLMODE"),
-	}, nil
-}
-
-func GetServerConfig() (ServerConfig, error) {
-	return ServerConfig{
-		Port:        ":" + os.Getenv("HTTP_PORT"),
-		Timeout:     os.Getenv("TIMEOUT"),
-		IdleTimeout: os.Getenv("IDLE_TIMEOUT"),
-	}, nil
-}
-
-func GetLoggerConfig() (LoggerConfig, error) {
-	return LoggerConfig{
-		Mode:     os.Getenv("LOG_MODE"),
-		Filepath: os.Getenv("LOG_FILE"),
-	}, nil
+	return config, nil
 }
