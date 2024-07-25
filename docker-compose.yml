@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  outboxer:
+    container_name: outboxer
+    build: "."
+    ports:
+      - "${HTTP_PORT}:${HTTP_PORT}"
+    restart: on-failure:5
+    tty: true
+    stdin_open: true
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+  postgres:
+    container_name: postgres
+    image:
+      postgres:15.2-alpine
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      POSTGRES_DB: ${PGDATABASE}
+      POSTGRES_USER: ${PGUSER}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+      PGDATA: "/var/lib/postgresql/data/pgdata"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - ${PGPORT}
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:
