@@ -19,13 +19,11 @@ func MustOpenDB(ctx context.Context, cfg config.Config) (*sql.DB, error) {
 	// open db
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		// TODO: add a log msg
 		return nil, fmt.Errorf("failed to open db: %w", err)
 	}
 
 	// check if db is alive
 	if err = db.PingContext(ctx); err != nil {
-		// TODO: add a log msg
 		return nil, fmt.Errorf("failed to ping db: %w", err)
 	}
 
