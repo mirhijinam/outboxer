@@ -1,0 +1,90 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/mirhijinam/outboxer/internal/api"
+	"github.com/mirhijinam/outboxer/internal/config"
+	"github.com/mirhijinam/outboxer/internal/pkg/db"
+	"github.com/mirhijinam/outboxer/internal/pkg/logger"
+	"github.com/mirhijinam/outboxer/internal/repository"
+	"github.com/mirhijinam/outboxer/internal/service"
+	"go.uber.org/zap"
+)
+
+func main() {
+	config, err := config.New()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	pool, err := db.MustOpenDB(context.Background(), config.DBConfig)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	logger := logger.New(config.LoggerConfig.Mode, config.LoggerConfig.Filepath)
+
+	r, err := api.New(
+		service.New(
+			repository.New(pool),
+		),
+		logger,
+	)
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = run(r, config.ServerConfig)
+	if err != nil {
+		logger.Error("failed to run the server",
+			zap.String("error", err.Error()),
+		)
+		os.Exit(2)
+	}
+}
+
+func run(r *gin.Engine, srvCfg config.ServerConfig) error {
+	timeout, err := time.ParseDuration(srvCfg.Timeout)
+	if err != nil {
+		return fmt.Errorf("failed to parse timeout value: %w", err)
+	}
+	idletimeout, err := time.ParseDuration(srvCfg.Timeout)
+	if err != nil {
+		return fmt.Errorf("failed to parse idle timeout value: %w", err)
+	}
+
+	srv := http.Server{
+		Handler:      r,
+		Addr:         srvCfg.Port,
+		WriteTimeout: timeout,
+		ReadTimeout:  timeout,
+		IdleTimeout:  idletimeout,
+	}
+
+	serveChan := make(chan error, 1)
+	go func() {
+		serveChan <- srv.ListenAndServe()
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case <-stop:
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+		return srv.Shutdown(ctx)
+	case err := <-serveChan:
+		return err
+	}
+}

@@ -30,7 +30,7 @@ type ServerConfig struct {
 }
 
 type LoggerConfig struct {
-	Mode     string `env:"LOG_MODE" envDefault:"DEBUG"`
+	Mode     string `env:"LOG_MODE" envDefault:"info"`
 	Filepath string `env:"LOG_FILE"`
 }
 
@@ -44,7 +44,6 @@ func New() (*Config, error) {
 	config := &Config{}
 
 	if err := env.Parse(config); err != nil {
-		// TODO: add a log msg
 		return nil, fmt.Errorf("failed to parse config from environment variables: %w", err)
 	}
 

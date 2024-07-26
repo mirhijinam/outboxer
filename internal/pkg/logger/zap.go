@@ -1,20 +1,32 @@
 package logger
 
 import (
-	"os"
-
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-func New() *zap.Logger {
-	var logger *zap.Logger
+func New(mode, filepath string) *zap.Logger {
+	cfg := zap.NewProductionConfig()
 
-	switch mode := os.Getenv("LOG_MODE"); mode {
+	var lvl zapcore.Level
+	var encoding string
+	switch mode {
+	case "info":
+		lvl = zap.InfoLevel
+		encoding = "console"
 	case "debug":
-		logger = zap.Must(zap.NewProduction())
-	case "develop":
-		logger = zap.Must(zap.NewDevelopment())
+		lvl = zap.DebugLevel
+		encoding = "json"
 	}
 
-	return logger
+	cfg.Level = zap.NewAtomicLevelAt(lvl)
+	cfg.Encoding = encoding
+	cfg.OutputPaths = []string{
+		filepath,
+	}
+	cfg.ErrorOutputPaths = []string{
+		filepath,
+	}
+
+	return zap.Must(cfg.Build())
 }
