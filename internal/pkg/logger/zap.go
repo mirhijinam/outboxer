@@ -1,13 +1,18 @@
 package logger
 
 import (
+	"fmt"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
 func New(mode, filepath string) *zap.Logger {
-	cfg := zap.NewProductionConfig()
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.TimeKey = "timestamp"
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 
+	cfg := zap.NewProductionConfig()
 	var lvl zapcore.Level
 	var encoding string
 	switch mode {
@@ -21,12 +26,18 @@ func New(mode, filepath string) *zap.Logger {
 
 	cfg.Level = zap.NewAtomicLevelAt(lvl)
 	cfg.Encoding = encoding
+	cfg.EncoderConfig = encoderCfg
 	cfg.OutputPaths = []string{
-		filepath,
+		filepath, "stderr",
 	}
 	cfg.ErrorOutputPaths = []string{
-		filepath,
+		filepath, "stderr",
 	}
 
-	return zap.Must(cfg.Build())
+	logger, err := cfg.Build()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to build logger: %v", err))
+	}
+
+	return logger
 }
