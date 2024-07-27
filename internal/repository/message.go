@@ -19,10 +19,10 @@ func New(p *pgxpool.Pool) *Repository {
 }
 
 func (r *Repository) Create(ctx context.Context, msg model.Message) error {
-	query := `INSERT INTO message (content, created_at)
-			  VALUES ($1, $2)`
+	query := `INSERT INTO message (content)
+			  VALUES ($1)`
 
-	_, err := r.pool.Exec(ctx, query, msg.Content, msg.CreatedAt)
+	_, err := r.pool.Exec(ctx, query, msg.Content)
 	if err != nil {
 		return fmt.Errorf("failed to exec query: Create: %w", err)
 	}

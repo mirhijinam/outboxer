@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mirhijinam/outboxer/internal/model"
@@ -10,8 +9,7 @@ import (
 )
 
 type createdMsgReq struct {
-	Content   string    `json:"content"`
-	CreatedAt time.Time `json:"created_at"`
+	Content string `json:"content"`
 }
 
 func (h *Handler) CreateMessage(c *gin.Context) {
@@ -24,8 +22,7 @@ func (h *Handler) CreateMessage(c *gin.Context) {
 	}
 
 	createdMsg := model.Message{
-		Content:   req.Content,
-		CreatedAt: time.Now(),
+		Content: req.Content,
 	}
 
 	if err := h.messageService.Create(c, createdMsg); err != nil {
