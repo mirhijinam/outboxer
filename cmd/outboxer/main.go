@@ -75,8 +75,6 @@ func run(r *gin.Engine, srvCfg config.ServerConfig) error {
 		IdleTimeout:  idletimeout,
 	}
 
-	log.Println(srv.Addr)
-
 	serveChan := make(chan error, 1)
 	go func() {
 		serveChan <- srv.ListenAndServe()
