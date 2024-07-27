@@ -31,13 +31,16 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	logger := logger.New(config.LoggerConfig.Mode, config.LoggerConfig.Filepath)
+	lgr := logger.New(config.LoggerConfig.Mode, config.LoggerConfig.Filepath)
+	defer lgr.Sync()
+
+	lgr.Info("This is an info message")
 
 	r, err := api.New(
 		service.New(
 			repository.New(pool),
 		),
-		logger,
+		lgr,
 	)
 
 	if err != nil {
@@ -46,9 +49,10 @@ func main() {
 
 	err = run(r, config.ServerConfig)
 	if err != nil {
-		logger.Error("failed to run the server",
+		lgr.Error("failed to run the server",
 			zap.String("error", err.Error()),
 		)
+		log.Println(err)
 		os.Exit(2)
 	}
 }
@@ -65,11 +69,13 @@ func run(r *gin.Engine, srvCfg config.ServerConfig) error {
 
 	srv := http.Server{
 		Handler:      r,
-		Addr:         srvCfg.Port,
+		Addr:         ":" + srvCfg.Port,
 		WriteTimeout: timeout,
 		ReadTimeout:  timeout,
 		IdleTimeout:  idletimeout,
 	}
+
+	log.Println(srv.Addr)
 
 	serveChan := make(chan error, 1)
 	go func() {
