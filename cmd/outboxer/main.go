@@ -16,7 +16,8 @@ import (
 	"github.com/mirhijinam/outboxer/internal/pkg/db"
 	"github.com/mirhijinam/outboxer/internal/pkg/logger"
 	"github.com/mirhijinam/outboxer/internal/repository"
-	"github.com/mirhijinam/outboxer/internal/service"
+	"github.com/mirhijinam/outboxer/internal/service/eventhandler"
+	"github.com/mirhijinam/outboxer/internal/service/message"
 	"go.uber.org/zap"
 )
 
@@ -36,16 +37,17 @@ func main() {
 
 	lgr.Info("This is an info message")
 
+	rep := repository.New(pool)
 	r, err := api.New(
-		service.New(
-			repository.New(pool),
-		),
+		message.New(rep),
 		lgr,
 	)
-
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	eventHandler := eventhandler.New(config.EventHandlerConfig, rep, lgr)
+	eventHandler.StartHandlingEvents(context.Background())
 
 	err = run(r, config.ServerConfig)
 	if err != nil {

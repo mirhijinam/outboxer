@@ -9,9 +9,10 @@ import (
 )
 
 type Config struct {
-	DBConfig     DBConfig
-	ServerConfig ServerConfig
-	LoggerConfig LoggerConfig
+	DBConfig           DBConfig
+	ServerConfig       ServerConfig
+	LoggerConfig       LoggerConfig
+	EventHandlerConfig EventHandlerConfig
 }
 
 type DBConfig struct {
@@ -32,6 +33,10 @@ type ServerConfig struct {
 type LoggerConfig struct {
 	Mode     string `env:"LOG_MODE" envDefault:"info"`
 	Filepath string `env:"LOG_FILE"`
+}
+
+type EventHandlerConfig struct {
+	CooldownSec int `env:"EVENT_HANDLER_CD_SEC"`
 }
 
 func init() {

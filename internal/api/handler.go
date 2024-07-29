@@ -9,23 +9,21 @@ import (
 )
 
 type messageService interface {
-	Create(ctx context.Context, msg model.Message) error
+	Create(ctx context.Context, msg model.Message) (int, error)
 }
 
 type Handler struct {
 	messageService messageService
-	logger         *zap.Logger
+	log            *zap.Logger
 }
 
 func New(ms messageService, zl *zap.Logger) (*gin.Engine, error) {
 	h := Handler{
 		messageService: ms,
-		logger:         zl,
+		log:            zl,
 	}
 
 	r := gin.New()
-	r.Use(gin.Recovery())
-
 	r.POST("/api/messages", h.CreateMessage)
 
 	return r, nil
