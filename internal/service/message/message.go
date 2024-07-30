@@ -2,7 +2,6 @@ package message
 
 import (
 	"context"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/mirhijinam/outboxer/internal/model"
@@ -10,7 +9,7 @@ import (
 
 type messageRepository interface {
 	Create(ctx context.Context, msg model.Message) (int, error)
-	CreateEvent(ctx context.Context, tx pgx.Tx, payload string, reservedFor time.Duration) error
+	CreateEvent(ctx context.Context, tx pgx.Tx, payload string) error
 	GetEventNew(ctx context.Context) (model.Event, error)
 	SetDone(ctx context.Context, id int) error
 }
