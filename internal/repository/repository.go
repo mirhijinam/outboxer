@@ -60,8 +60,7 @@ func (r *Repository) Create(ctx context.Context, msg model.Message) (lastInserte
 
 	// save the message in the outbox-table
 	eventPayload := fmt.Sprintf(`{"id": %d, "content": "%s"}`, lastInsertId, msg.Content)
-	reservedFor := 5 * time.Hour // TODO: add it to config
-	if err := r.CreateEvent(ctx, tx, eventPayload, reservedFor); err != nil {
+	if err := r.CreateEvent(ctx, tx, eventPayload); err != nil {
 		return -1, fmt.Errorf("failed to create event. Create: %w", err)
 	}
 
@@ -72,11 +71,11 @@ func (r *Repository) Create(ctx context.Context, msg model.Message) (lastInserte
 	return lastInsertId, nil
 }
 
-func (r *Repository) CreateEvent(ctx context.Context, tx pgx.Tx, payload string, reservedFor time.Duration) error {
+func (r *Repository) CreateEvent(ctx context.Context, tx pgx.Tx, payload string) error {
 	query := `INSERT INTO event (payload, reserved_for)
 			  VALUES ($1, $2)`
 
-	_, err := tx.Exec(ctx, query, payload, reservedFor)
+	_, err := tx.Exec(ctx, query, payload, 0*time.Hour)
 	if err != nil {
 		return fmt.Errorf("failed to exec query. CreateEvent: %w", err)
 	}
@@ -104,9 +103,11 @@ func (r *Repository) GetEventNew(ctx context.Context) (model.Event, error) {
 	if time.Now().Before(evnt.CreatedAt.Add(evnt.ReservedFor)) {
 		return model.Event{}, fmt.Errorf("failed to scan event w/ status 'new'. GetEventNew: %w", errors.New("the event has been already reserved"))
 	}
+	reservedFor := 5 * time.Hour // TODO: add it to config
 	return model.Event{
-		ID:      evnt.Id,
-		Payload: evnt.Payload,
+		ID:          evnt.Id,
+		Payload:     evnt.Payload,
+		ReservedFor: reservedFor,
 	}, nil
 }
 
