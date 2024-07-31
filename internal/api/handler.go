@@ -10,6 +10,7 @@ import (
 
 type messageService interface {
 	Create(ctx context.Context, msg model.Message) (int, error)
+	GetStats(ctx context.Context) (map[string]int, error)
 }
 
 type Handler struct {

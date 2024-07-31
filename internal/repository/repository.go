@@ -120,3 +120,32 @@ func (r *Repository) SetDone(ctx context.Context, id int) error {
 
 	return nil
 }
+
+func (r *Repository) GetStats(ctx context.Context) (map[string]int, error) {
+	ret := make(map[string]int)
+	queries := []string{
+		`SELECT COUNT(*) FROM event WHERE status = 'new'`,
+		`SELECT COUNT(*) FROM event WHERE status = 'done'`,
+	}
+
+	// Выполнение запросов
+	for i, query := range queries {
+		var count int
+		row := r.pool.QueryRow(ctx, query)
+		err := row.Scan(&count)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan the row. GetStats: %w", err)
+		}
+
+		switch i {
+		case 0:
+			ret["new"] = count
+		case 1:
+			ret["done"] = count
+		}
+
+		ret["all"] = ret["new"] + ret["done"]
+	}
+
+	return ret, nil
+}
