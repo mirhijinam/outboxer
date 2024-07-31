@@ -13,10 +13,12 @@ services:
     depends_on:
       - postgres
       - kafka
+    networks:
+      - mynetwork
+
   postgres:
     container_name: postgres
-    image:
-      postgres:15.2-alpine
+    image: postgres:15.2-alpine
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${PGUSER}"]
       interval: 10s
@@ -30,9 +32,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - ${PGPORT}
+      - "${PGPORT}:5432"
     env_file:
       - .env
+    networks:
+      - mynetwork
+
   migrate:
     container_name: migrate
     image: migrate/migrate
@@ -40,15 +45,21 @@ services:
       - .env
     volumes:
       - ./db/migrations:/migrations
-    command: [ "-path", "/migrations", "-database",  "postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}/${PGDATABASE}?sslmode=${PGSSLMODE}", "up" ]
+    command: [ "-path", "/migrations", "-database", "postgres://${PGUSER}:${PGPASSWORD}@postgres/${PGDATABASE}?sslmode=${PGSSLMODE}", "up" ]
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - mynetwork
+
   zookeeper:
     container_name: zookeeper
     image: wurstmeister/zookeeper:latest
     ports:
       - "2181:2181"
+    networks:
+      - mynetwork
+
   kafka:
     container_name: kafka
     image: wurstmeister/kafka:latest
@@ -65,6 +76,9 @@ services:
       KAFKA_MIN_INSYNC_REPLICAS: '1'
     depends_on:
       - zookeeper
+    networks:
+      - mynetwork
+
   init-kafka:
     container_name: init-kafka
     image: wurstmeister/kafka:latest
@@ -82,5 +96,12 @@ services:
       echo -e 'log about topic creation:'
       /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --list
       "
+    networks:
+      - mynetwork
+
 volumes:
   postgres_data:
+
+networks:
+  mynetwork:
+    driver: bridge
