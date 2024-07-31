@@ -28,7 +28,6 @@
 curl -X POST http://87.228.8.119:8080/api/messages \
     -H "Content-Type: application/json" \
     -d '{"content": "Test 94"}'
-
 ```
 
 ### Получение статистики
