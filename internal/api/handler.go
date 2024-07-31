@@ -25,6 +25,7 @@ func New(ms messageService, zl *zap.Logger) (*gin.Engine, error) {
 
 	r := gin.New()
 	r.POST("/api/messages", h.CreateMessage)
+	r.GET("/api/event_stats", h.GetEventStats)
 
 	return r, nil
 }

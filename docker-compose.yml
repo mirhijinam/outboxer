@@ -1,6 +1,7 @@
 services:
   outboxer:
     container_name: outboxer
+    platform: linux/amd64
     build: "."
     ports:
       - "${HTTP_PORT}:${HTTP_PORT}"
@@ -10,8 +11,8 @@ services:
     env_file:
       - .env
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+      - kafka
   postgres:
     container_name: postgres
     image:
@@ -27,12 +28,38 @@ services:
       POSTGRES_PASSWORD: ${PGPASSWORD}
       PGDATA: "/var/lib/postgresql/data/pgdata"
     volumes:
-      - ./db/init:/docker-entrypoint-initdb.d
       - postgres_data:/var/lib/postgresql/data
     ports:
       - ${PGPORT}
     env_file:
       - .env
-
+  migrate:
+    container_name: migrate
+    image: migrate/migrate
+    env_file:
+      - .env
+    volumes:
+      - ./db/migrations:/migrations
+    command: [ "-path", "/migrations", "-database",  "postgres://${PGUSER}:${PGPASSWORD}@${PGHOST}/${PGDATABASE}?sslmode=${PGSSLMODE}", "up" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+  zookeeper:
+    container_name: zookeeper
+    image: wurstmeister/zookeeper:latest
+    ports:
+      - "2181:2181"
+  kafka:
+    container_name: kafka
+    image: wurstmeister/kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+    depends_on:
+      - zookeeper
 volumes:
   postgres_data:

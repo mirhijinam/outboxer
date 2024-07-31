@@ -17,6 +17,7 @@ import (
 	"github.com/mirhijinam/outboxer/internal/pkg/logger"
 	"github.com/mirhijinam/outboxer/internal/repository"
 	"github.com/mirhijinam/outboxer/internal/service/eventhandler"
+	"github.com/mirhijinam/outboxer/internal/service/kafka"
 	"github.com/mirhijinam/outboxer/internal/service/message"
 	"go.uber.org/zap"
 )
@@ -46,8 +47,27 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	eventHandler := eventhandler.New(config.EventHandlerConfig, rep, lgr)
-	eventHandler.StartHandlingEvents(context.Background())
+	kafkaProducer, err := kafka.NewProducer(config.KafkaConfig, lgr)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	defer kafkaProducer.Close()
+
+	eventHandler := eventhandler.New(config.EventHandlerConfig, rep, kafkaProducer, lgr)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	eventHandler.StartHandlingEvents(ctx)
+
+	kafkaConsumer, err := kafka.NewConsumer(config.KafkaConfig, lgr, func(ctx context.Context, message []byte) error {
+		fmt.Printf("received message: %s\n", string(message))
+		return nil
+	})
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	defer kafkaConsumer.Close()
+
+	go kafkaConsumer.Run(ctx)
 
 	err = run(r, config.ServerConfig)
 	if err != nil {

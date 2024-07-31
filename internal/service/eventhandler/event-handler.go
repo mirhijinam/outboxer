@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/mirhijinam/outboxer/internal/config"
 	"github.com/mirhijinam/outboxer/internal/model"
+	"github.com/mirhijinam/outboxer/internal/service/kafka"
 	"go.uber.org/zap"
 )
 
@@ -19,22 +20,29 @@ type messageRepository interface {
 
 type eventHandler struct {
 	messageRepository messageRepository
+	kProducer         *kafka.Producer
 	log               *zap.Logger
 	cooldown          time.Duration
 }
 
-func New(ehConfig config.EventHandlerConfig, mr messageRepository, l *zap.Logger) *eventHandler {
+func New(ehConfig config.EventHandlerConfig, mr messageRepository, kp *kafka.Producer, l *zap.Logger) *eventHandler {
 
 	handlerCooldown := time.Duration(ehConfig.CooldownSec) * time.Second
 	return &eventHandler{
 		messageRepository: mr,
+		kProducer:         kp,
 		log:               l,
 		cooldown:          handlerCooldown,
 	}
 }
 
-func (eh *eventHandler) StartHandlingEvents(ctx context.Context) {
+func (eh *eventHandler) Close() {
+	if eh.kProducer != nil {
+		eh.kProducer.Close()
+	}
+}
 
+func (eh *eventHandler) StartHandlingEvents(ctx context.Context) {
 	ticker := time.NewTicker(
 		eh.cooldown,
 	)
@@ -46,12 +54,11 @@ func (eh *eventHandler) StartHandlingEvents(ctx context.Context) {
 				eh.log.Info("handling is stopped. StartHandlingEvents: Context was done.")
 				return
 			case <-ticker.C:
-				// waiting
 			}
 
 			ev, err := eh.messageRepository.GetEventNew(ctx)
 			if err != nil {
-				eh.log.Error("failed to get event w/ status 'new'. StartHandlingEvents: %w", zap.Error(err))
+				eh.log.Error("failed to get event w/ status 'new'. StartHandlingEvents:", zap.Error(err))
 				continue
 			}
 
@@ -59,10 +66,13 @@ func (eh *eventHandler) StartHandlingEvents(ctx context.Context) {
 				continue
 			}
 
-			// TODO: implement eh.SendMessage
+			if err := eh.kProducer.SendMessage(ctx, []byte(ev.Payload)); err != nil {
+				eh.log.Error("failed to send message to Kafka. StartHandlingEvents:", zap.Error(err))
+				continue
+			}
 
 			if err := eh.messageRepository.SetDone(ctx, ev.ID); err != nil {
-				eh.log.Error("failed to set event status 'done': %w", zap.Error(err))
+				eh.log.Error("failed to set event status 'done':", zap.Error(err))
 				continue
 			}
 		}

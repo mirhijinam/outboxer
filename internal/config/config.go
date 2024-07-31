@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
@@ -13,6 +14,7 @@ type Config struct {
 	ServerConfig       ServerConfig
 	LoggerConfig       LoggerConfig
 	EventHandlerConfig EventHandlerConfig
+	KafkaConfig        KafkaConfig
 }
 
 type DBConfig struct {
@@ -37,6 +39,14 @@ type LoggerConfig struct {
 
 type EventHandlerConfig struct {
 	CooldownSec int `env:"EVENT_HANDLER_CD_SEC"`
+}
+
+type KafkaConfig struct {
+	Brokers     string        `env:"KAFKA_BROKERS"`
+	Topic       string        `env:"KAFKA_TOPIC"`
+	GroupID     string        `env:"KAFKA_GROUP_ID"`
+	Timeout     time.Duration `env:"KAFKA_TIMEOUT"`
+	OffsetReset string        `env:"KAFKA_OFFSET_RESET"`
 }
 
 func init() {

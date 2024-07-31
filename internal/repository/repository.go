@@ -38,21 +38,22 @@ func (r *Repository) Create(ctx context.Context, msg model.Message) (lastInserte
 		if err != nil {
 			rollbackErr := tx.Rollback(ctx)
 			if rollbackErr != nil {
-				err = errors.Join(rollbackErr)
+				err = fmt.Errorf("rollback failed: %w, original error: %v", rollbackErr, err)
 			}
 			return
 		}
 
 		commitErr := tx.Commit(ctx)
 		if commitErr != nil {
-			err = errors.Join(commitErr)
+			err = fmt.Errorf("commit failed: %w", commitErr)
 		}
 	}()
 
 	query := `INSERT INTO message (content)
-			  VALUES ($1)`
+              VALUES ($1)
+              RETURNING id`
 
-	lastInsertId := 0
+	var lastInsertId int
 	err = tx.QueryRow(ctx, query, msg.Content).Scan(&lastInsertId)
 	if err != nil {
 		return -1, fmt.Errorf("failed to exec query. Create: %w", err)
@@ -64,10 +65,7 @@ func (r *Repository) Create(ctx context.Context, msg model.Message) (lastInserte
 		return -1, fmt.Errorf("failed to create event. Create: %w", err)
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		return -1, fmt.Errorf("failed to commit transaction. Create: %w", err)
-	}
+	// Commit the transaction after all operations are done
 	return lastInsertId, nil
 }
 
@@ -75,17 +73,16 @@ func (r *Repository) CreateEvent(ctx context.Context, tx pgx.Tx, payload string)
 	query := `INSERT INTO event (payload, reserved_for)
 			  VALUES ($1, $2)`
 
-	_, err := tx.Exec(ctx, query, payload, 0*time.Hour)
+	_, err := tx.Exec(ctx, query, payload, nil)
 	if err != nil {
 		return fmt.Errorf("failed to exec query. CreateEvent: %w", err)
 	}
 
 	return nil
-
 }
 
 func (r *Repository) GetEventNew(ctx context.Context) (model.Event, error) {
-	query := `SELECT id, payload, reserved_for FROM event
+	query := `SELECT id, payload, created_at, reserved_for FROM event
 			  WHERE status = 'new'
 			  LIMIT 1`
 	row := r.pool.QueryRow(ctx, query)
