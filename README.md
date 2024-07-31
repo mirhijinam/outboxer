@@ -25,7 +25,7 @@
 Отправка сообщения в базу данных:
 
 ```curl
-curl -X POST http://localhost:8080/api/messages \     
+curl -X POST http://87.228.8.119:8080/api/messages \     
     -H "Content-Type: application/json" \
     -d '{
         "content": "Test 94"
@@ -34,7 +34,7 @@ curl -X POST http://localhost:8080/api/messages \
 
 ### Получение статистики
 ```curl
-curl -X GET http://localhost:8080/api/event_stats
+curl -X GET http://87.228.8.119:8080/api/event_stats
 ```
 
 ### Примечание
