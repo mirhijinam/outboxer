@@ -15,7 +15,7 @@ type Producer struct {
 }
 
 func NewProducer(kafkaCfg config.KafkaConfig, l *zap.Logger) (*Producer, error) {
-	p, err := k.NewProducer(&k.ConfigMap{"bootstrap.servers": kafkaCfg.Brokers, "broker.address.family": "v4"})
+	p, err := k.NewProducer(&k.ConfigMap{"bootstrap.servers": kafkaCfg.Brokers})
 	if err != nil {
 		return nil, err
 	}

@@ -16,10 +16,10 @@ type Repository struct {
 }
 
 type event struct {
-	Id          int           `pool:"id"`
-	Payload     string        `pool:"payload"`
-	CreatedAt   time.Time     `pool:"created_at"`
-	ReservedFor time.Duration `pool:"reserved_for"`
+	Id            int       `pool:"id"`
+	Payload       string    `pool:"payload"`
+	CreatedAt     time.Time `pool:"created_at"`
+	ReservedUntil time.Time `pool:"reserved_until"`
 }
 
 func New(p *pgxpool.Pool) *Repository {
@@ -70,10 +70,10 @@ func (r *Repository) Create(ctx context.Context, msg model.Message) (lastInserte
 }
 
 func (r *Repository) CreateEvent(ctx context.Context, tx pgx.Tx, payload string) error {
-	query := `INSERT INTO event (payload, reserved_for)
-			  VALUES ($1, $2)`
+	query := `INSERT INTO event (payload)
+			  VALUES ($1)`
 
-	_, err := tx.Exec(ctx, query, payload, nil)
+	_, err := tx.Exec(ctx, query, payload)
 	if err != nil {
 		return fmt.Errorf("failed to exec query. CreateEvent: %w", err)
 	}
@@ -82,13 +82,13 @@ func (r *Repository) CreateEvent(ctx context.Context, tx pgx.Tx, payload string)
 }
 
 func (r *Repository) GetEventNew(ctx context.Context) (model.Event, error) {
-	query := `SELECT id, payload, created_at, reserved_for FROM event
+	query := `SELECT id, payload, created_at, reserved_until FROM event
 			  WHERE status = 'new'
 			  LIMIT 1`
 	row := r.pool.QueryRow(ctx, query)
 
 	var evnt event
-	err := row.Scan(&evnt.Id, &evnt.Payload, &evnt.CreatedAt, &evnt.ReservedFor)
+	err := row.Scan(&evnt.Id, &evnt.Payload, &evnt.CreatedAt, &evnt.ReservedUntil)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.Event{}, nil
@@ -97,14 +97,15 @@ func (r *Repository) GetEventNew(ctx context.Context) (model.Event, error) {
 		return model.Event{}, fmt.Errorf("failed to scan event w/ status 'new'. GetEventNew: %w", err)
 	}
 
-	if time.Now().Before(evnt.CreatedAt.Add(evnt.ReservedFor)) {
+	if !evnt.CreatedAt.Equal(evnt.ReservedUntil) {
 		return model.Event{}, fmt.Errorf("failed to scan event w/ status 'new'. GetEventNew: %w", errors.New("the event has been already reserved"))
 	}
-	reservedFor := 5 * time.Hour // TODO: add it to config
+
+	reservedUntil := evnt.ReservedUntil.Add(10 * time.Minute) // TODO: add it to config
 	return model.Event{
-		ID:          evnt.Id,
-		Payload:     evnt.Payload,
-		ReservedFor: reservedFor,
+		ID:            evnt.Id,
+		Payload:       evnt.Payload,
+		ReservedUntil: reservedUntil,
 	}, nil
 }
 

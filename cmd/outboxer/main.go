@@ -36,7 +36,7 @@ func main() {
 	lgr := logger.New(config.LoggerConfig.Mode, config.LoggerConfig.Filepath)
 	defer lgr.Sync()
 
-	lgr.Info("This is an info message")
+	lgr.Info("this is an info message")
 
 	rep := repository.New(pool)
 	r, err := api.New(

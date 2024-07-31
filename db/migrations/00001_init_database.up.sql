@@ -6,10 +6,10 @@ CREATE TABLE IF NOT EXISTS "message" (
 );
 
 CREATE TABLE IF NOT EXISTS "event" (
-    id           INT GENERATED ALWAYS AS IDENTITY NOT NULL,
-    payload      TEXT NOT NULL,
-    status       TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'done')),
-    created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
-    reserved_for INTERVAL,
+    id             INT GENERATED ALWAYS AS IDENTITY NOT NULL,
+    payload        TEXT NOT NULL,
+    status         TEXT NOT NULL DEFAULT 'new' CHECK(status IN ('new', 'done')),
+    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+    reserved_until TIMESTAMP NOT NULL DEFAULT NOW(),
     PRIMARY KEY (id)
 );

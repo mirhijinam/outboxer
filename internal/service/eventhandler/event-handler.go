@@ -51,7 +51,7 @@ func (eh *eventHandler) StartHandlingEvents(ctx context.Context) {
 		for {
 			select {
 			case <-ctx.Done():
-				eh.log.Info("handling is stopped. StartHandlingEvents: Context was done.")
+				eh.log.Info("handling is stopped. StartHandlingEvents: context was done.")
 				return
 			case <-ticker.C:
 			}
@@ -67,12 +67,12 @@ func (eh *eventHandler) StartHandlingEvents(ctx context.Context) {
 			}
 
 			if err := eh.kProducer.SendMessage(ctx, []byte(ev.Payload)); err != nil {
-				eh.log.Error("failed to send message to Kafka. StartHandlingEvents:", zap.Error(err))
+				eh.log.Error("failed to send message to kafka. StartHandlingEvents:", zap.Error(err))
 				continue
 			}
 
 			if err := eh.messageRepository.SetDone(ctx, ev.ID); err != nil {
-				eh.log.Error("failed to set event status 'done':", zap.Error(err))
+				eh.log.Error("failed to set event status 'done'. StartHandlingEvents:", zap.Error(err))
 				continue
 			}
 		}
